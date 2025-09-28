@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Question Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/katex/0.16.8/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/katex/0.16.8/katex.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 3px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #00f2fe;
+            background: #e6f7ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .processing {
+            text-align: center;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #4facfe;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .question-number {
+            background: #4facfe;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .toggle-solution {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .toggle-solution:hover {
+            background: #218838;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .solution {
+            background: #e9f7ef;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+
+        .solution.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .math {
+            font-size: 1.1rem;
+        }
+
+        .export-section {
+            background: #f1f3f4;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Homework Question Generator</h1>
+            <p>Upload your homework PDF and get similar practice questions with solutions</p>
+        </div>
+        
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Drag and drop your homework PDF here</div>
+                <div>or</div>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    Choose PDF File
+                </button>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn" id="generateBtn" onclick="generateQuestions()" disabled>
+                    🤖 Generate Similar Questions
+                </button>
+            </div>
+
+            <div id="processing" class="processing" style="display: none;">
+                <div class="spinner"></div>
+                <div>Processing your homework and generating questions...</div>
+                <div style="font-size: 0.9rem; color: #6c757d; margin-top: 5px;">This may take 30-60 seconds</div>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="success" class="success" style="display: none;"></div>
+
+            <div id="results" class="results" style="display: none;">
+                <h2>Generated Practice Questions</h2>
+                <div id="questionsContainer"></div>
+                
+                <div class="export-section">
+                    <h3>Export Your Questions</h3>
+                    <p>Download your generated questions as a PDF for offline practice</p>
+                    <button class="btn" onclick="exportToPDF()">📄 Export as PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedPdfText = '';
+        let generatedQuestions = [];
+
+        // Set up PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const generateBtn = document.getElementById('generateBtn');
+
+        fileInput.addEventListener('change', handleFileUpload);
+
+        // Drag and drop functionality
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFile(files[0]);
+            }
+        });
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                await handleFile(file);
+            }
+        }
+
+        async function handleFile(file) {
+            if (file.type !== 'application/pdf') {
+                showError('Please upload a PDF file only.');
+                return;
+            }
+
+            try {
+                showSuccess('PDF uploaded successfully! Processing text...');
+                
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                
+                uploadedPdfText = fullText;
+                generateBtn.disabled = false;
+                
+                showSuccess(`PDF processed successfully! Found ${fullText.length} characters of text. Ready to generate questions.`);
+                
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                showError('Error processing PDF. Please try a different file.');
+            }
+        }
+
+        async function generateQuestions() {
+            if (!uploadedPdfText.trim()) {
+                showError('Please upload a PDF first.');
+                return;
+            }
+
+            const processing = document.getElementById('processing');
+            const results = document.getElementById('results');
+            
+            processing.style.display = 'block';
+            results.style.display = 'none';
+            generateBtn.disabled = true;
+
+            try {
+                // Call our backend API instead of Claude directly
+                const response = await fetch("/api/generate-questions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        homeworkText: uploadedPdfText
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                generatedQuestions = data.questions;
+                displayQuestions(generatedQuestions);
+                
+                processing.style.display = 'none';
+                results.style.display = 'block';
+                showSuccess(`Successfully generated ${generatedQuestions.length} practice questions!`);
+
+            } catch (error) {
+                console.error('Error generating questions:', error);
+                showError(`Error generating questions: ${error.message}`);
+                processing.style.display = 'none';
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        function displayQuestions(questions) {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            questions.forEach((q, index) => {
+                const questionCard = document.createElement('div');
+                questionCard.className = 'question-card';
+                
+                questionCard.innerHTML = `
+                    <div class="question-header">
+                        <div class="question-number">Question ${index + 1}</div>
+                        <div>
+                            <span style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-right: 10px;">
+                                ${q.topic || 'General'} - ${q.difficulty || 'Medium'}
+                            </span>
+                            <button class="toggle-solution" onclick="toggleSolution(${index})">
+                                Show Solution
+                            </button>
+                        </div>
+                    </div>
+                    <div class="question-text" id="question-${index}">${q.question}</div>
+                    <div class="solution" id="solution-${index}">
+                        <h4>Solution:</h4>
+                        <div id="solution-content-${index}">${q.solution}</div>
+                    </div>
+                `;
+                
+                container.appendChild(questionCard);
+                
+                // Render LaTeX after adding to DOM
+                setTimeout(() => {
+                    renderMathInElement(document.getElementById(`question-${index}`));
+                    renderMathInElement(document.getElementById(`solution-content-${index}`));
+                }, 100);
+            });
+        }
+
+        function renderMathInElement(element) {
+            if (!element) return;
+            
+            try {
+                // Render LaTeX using KaTeX
+                const mathElements = element.querySelectorAll('script[type="math/tex"]');
+                mathElements.forEach(mathEl => {
+                    const math = mathEl.textContent;
+                    const rendered = katex.renderToString(math, {
+                        throwOnError: false,
+                        displayMode: mathEl.hasAttribute('display')
+                    });
+                    const span = document.createElement('span');
+                    span.innerHTML = rendered;
+                    mathEl.parentNode.replaceChild(span, mathEl);
+                });
+                
+                // Also handle inline LaTeX with $ delimiters
+                let html = element.innerHTML;
+                html = html.replace(/\$\$([^$]+)\$\$/g, (match, math) => {
+                    try {
+                        return katex.renderToString(math, { displayMode: true, throwOnError: false });
+                    } catch {
+                        return match;
+                    }
+                });
+                html = html.replace(/\$([^$]+)\$/g, (match, math) => {
+                    try {
+                        return katex.renderToString(math, { displayMode: false, throwOnError: false });
+                    } catch {
+                        return match;
+                    }
+                });
+                element.innerHTML = html;
+            } catch (error) {
+                console.warn('Math rendering error:', error);
+            }
+        }
+
+        function toggleSolution(index) {
+            const solution = document.getElementById(`solution-${index}`);
+            const button = solution.parentNode.querySelector('.toggle-solution');
+            
+            if (solution.classList.contains('show')) {
+                solution.classList.remove('show');
+                button.textContent = 'Show Solution';
+            } else {
+                solution.classList.add('show');
+                button.textContent = 'Hide Solution';
+            }
+        }
+
+        async function exportToPDF() {
+            if (generatedQuestions.length === 0) {
+                showError('No questions to export. Generate questions first.');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(20);
+                doc.text('Generated Practice Questions', 20, 30);
+                
+                let yPosition = 50;
+                const pageHeight = doc.internal.pageSize.height;
+                
+                generatedQuestions.forEach((q, index) => {
+                    // Check if we need a new page
+                    if (yPosition > pageHeight - 60) {
+                        doc.addPage();
+                        yPosition = 30;
+                    }
+                    
+                    doc.setFontSize(14);
+                    doc.text(`Question ${index + 1}:`, 20, yPosition);
+                    yPosition += 10;
+                    
+                    doc.setFontSize(12);
+                    const questionLines = doc.splitTextToSize(q.question.replace(/\$[^$]*\$/g, '[MATH]'), 170);
+                    doc.text(questionLines, 20, yPosition);
+                    yPosition += questionLines.length * 7 + 10;
+                    
+                    doc.setFontSize(12);
+                    doc.text('Solution:', 20, yPosition);
+                    yPosition += 7;
+                    
+                    const solutionLines = doc.splitTextToSize(q.solution.replace(/\$[^$]*\$/g, '[MATH]'), 170);
+                    doc.text(solutionLines, 20, yPosition);
+                    yPosition += solutionLines.length * 7 + 15;
+                });
+                
+                doc.save('practice-questions.pdf');
+                showSuccess('PDF exported successfully!');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showError('Error exporting PDF. Please try again.');
+            }
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            const success = document.getElementById('success');
+            error.textContent = message;
+            error.style.display = 'block';
+            success.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const success = document.getElementById('success');
+            const error = document.getElementById('error');
+            success.textContent = message;
+            success.style.display = 'block';
+            error.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
